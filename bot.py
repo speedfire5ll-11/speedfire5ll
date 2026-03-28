@@ -613,16 +613,36 @@ async def close(interaction: Interaction):
     await close_ticket_logic(interaction)
 
 @bot.tree.command(name="managerole", description="Add or remove roles from a user (Management only)")
-@app_commands.describe(user="User", role="Role", action="add or remove")
-async def managerole(interaction: Interaction, user: discord.Member, role: discord.Role, action: str):
+@app_commands.describe(user="User", role="Role", action="add or remove", reason="Reason")
+async def managerole(interaction: Interaction, user: discord.Member, role: discord.Role, action: str, reason: str = "No reason provided"):
     if not is_manager(interaction):
         return await interaction.response.send_message("❌ Only Managers can use this command.", ephemeral=True)
+    ROLE_LOG_CHANNEL_ID = 1487598068114128936
+    log_ch = interaction.guild.get_channel(ROLE_LOG_CHANNEL_ID)
     if action.lower() == "add":
         await user.add_roles(role)
         await interaction.response.send_message(f"✅ {role.name} added to {user.mention}")
+        if log_ch:
+            embed = Embed(title="Role Given ✅", color=Color.green(), timestamp=datetime.datetime.now())
+            embed.add_field(name="Actioned By", value=f"{interaction.user} ({interaction.user.id})", inline=False)
+            embed.add_field(name="Target User", value=f"{user} ({user.id})", inline=False)
+            embed.add_field(name="Role", value=role.name, inline=False)
+            embed.add_field(name="Reason", value=reason, inline=False)
+            embed.add_field(name="Time", value=datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p"), inline=False)
+            embed.set_footer(text="Powered by Trading Portal • Today")
+            await log_ch.send(embed=embed)
     elif action.lower() == "remove":
         await user.remove_roles(role)
         await interaction.response.send_message(f"✅ {role.name} removed from {user.mention}")
+        if log_ch:
+            embed = Embed(title="Role Removed ❌", color=Color.red(), timestamp=datetime.datetime.now())
+            embed.add_field(name="Actioned By", value=f"{interaction.user} ({interaction.user.id})", inline=False)
+            embed.add_field(name="Target User", value=f"{user} ({user.id})", inline=False)
+            embed.add_field(name="Role", value=role.name, inline=False)
+            embed.add_field(name="Reason", value=reason, inline=False)
+            embed.add_field(name="Time", value=datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p"), inline=False)
+            embed.set_footer(text="Powered by Trading Portal • Today")
+            await log_ch.send(embed=embed)
     else:
         await interaction.response.send_message("❌ Action must be 'add' or 'remove'.", ephemeral=True)
 
