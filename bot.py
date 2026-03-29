@@ -749,5 +749,100 @@ async def whatismm(interaction: Interaction):
     )
     embed.set_footer(text="Powered by Trading Portal • Today")
     await interaction.response.send_message(embed=embed)
+    SUPPORT_STAFF_ROLE_ID = 1487831645603233974
+
+class SupportTicketPanel(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @ui.button(label="🔵 Open a ticket!", style=discord.ButtonStyle.primary, custom_id="persistent:open_support_ticket")
+    async def open_support_ticket(self, interaction: Interaction, button: Button):
+        category = interaction.guild.get_channel(TICKETS_CATEGORY_ID)
+        if not category:
+            return await interaction.response.send_message("❌ Ticket category configuration missing.", ephemeral=True)
+
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.user: discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True),
+            interaction.guild.get_role(SUPPORT_STAFF_ROLE_ID): discord.PermissionOverwrite(view_channel=True, send_messages=True, attach_files=True)
+        }
+
+        channel = await interaction.guild.create_text_channel(
+            name=f"support-{interaction.user.name}",
+            category=category,
+            overwrites=overwrites
+        )
+
+        bot.active_tickets[str(channel.id)] = {"owner": interaction.user.id, "claimed": None}
+        await bot.save_data()
+
+        embed = Embed(
+            title="🔵 Support Ticket",
+            description=(
+                "✅ A support helper will be with you shortly!\n\n"
+                "📌 Please provide:\n"
+                "• Your issue or question\n"
+                "• Any relevant screenshots or proof\n"
+                "• Who was involved if applicable\n\n"
+                "⬇️ A support staff member will claim your ticket shortly."
+            ),
+            color=Color.blue()
+        )
+
+        await channel.send(
+            content=f"{interaction.user.mention} <@&{SUPPORT_STAFF_ROLE_ID}>",
+            embed=embed,
+            view=SupportTicketControls()
+        )
+
+        await interaction.response.send_message(f"✅ Your support ticket has been created: {channel.mention}", ephemeral=True)
+
+
+class SupportTicketControls(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @ui.button(label="🛡️ Claim", style=discord.ButtonStyle.success, custom_id="persistent:claim_support_ticket")
+    async def claim(self, interaction: Interaction, button: Button):
+        tid = str(interaction.channel.id)
+        data = bot.active_tickets.get(tid)
+        if not data:
+            return await interaction.response.send_message("❌ This is not an active ticket channel.", ephemeral=True)
+        if data["claimed"]:
+            return await interaction.response.send_message("❌ This ticket is already claimed.", ephemeral=True)
+        if not has_role(interaction.user, SUPPORT_STAFF_ROLE_ID) and not is_manager(interaction):
+            return await interaction.response.send_message("❌ Only Support Staff can claim this ticket.", ephemeral=True)
+        data["claimed"] = interaction.user.id
+        await bot.save_data()
+        button.label = "✅ Claimed"
+        button.disabled = True
+        button.style = discord.ButtonStyle.secondary
+        await interaction.channel.set_permissions(interaction.user, send_messages=True, attach_files=True)
+        embed = interaction.message.embeds[0]
+        embed.add_field(name="Claimed By", value=interaction.user.mention, inline=False)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @ui.button(label="🔒 Close", style=discord.ButtonStyle.danger, custom_id="persistent:close_support_ticket")
+    async def close(self, interaction: Interaction, button: Button):
+        await close_ticket_logic(interaction)
+
+
+@bot.tree.command(name="setupsupportticket", description="Deploy the Support ticket panel in this channel")
+async def setupsupportticket(interaction: Interaction):
+    if not is_manager(interaction):
+        return await interaction.response.send_message("❌ No permission. Only Managers can use this.", ephemeral=True)
+
+    embed = Embed(
+        title="💎 Support Ticket",
+        description=(
+            "By opening a support ticket, a support helper will help you with your problems.\n\n"
+            "**If a MM scammed you, or someone scammed you**\n"
+            "Any other reasons we will also help you with."
+        ),
+        color=Color.blue()
+    )
+
+    await interaction.channel.send(embed=embed, view=SupportTicketPanel())
+    await interaction.response.send_message("✅ Support ticket panel deployed successfully.", ephemeral=True).
 if __name__ == "__main__":
     bot.run(os.environ.get("BOT_TOKEN"))
