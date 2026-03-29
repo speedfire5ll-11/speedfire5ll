@@ -563,8 +563,9 @@ async def setupindexticket(interaction: Interaction):
 
 @bot.tree.command(name="setupsupportticket", description="Deploy the Support ticket panel in this channel")
 async def setupsupportticket(interaction: Interaction):
+    await interaction.response.defer(ephemeral=True)
     if not is_manager(interaction):
-        return await interaction.response.send_message("❌ No permission. Only Managers can use this.", ephemeral=True)
+        return await interaction.followup.send("❌ No permission. Only Managers can use this.", ephemeral=True)
     embed = Embed(
         title="💎 Support Ticket",
         description=(
@@ -575,8 +576,7 @@ async def setupsupportticket(interaction: Interaction):
         color=Color.blue()
     )
     await interaction.channel.send(embed=embed, view=SupportTicketPanel())
-    await interaction.response.send_message("✅ Support ticket panel deployed successfully.", ephemeral=True)
-
+    await interaction.followup.send("✅ Support ticket panel deployed successfully.", ephemeral=True)
 @bot.tree.command(name="info", description="Send scam notification to a user (MM only)")
 @app_commands.describe(user="The user to target with the scam notification")
 async def info(interaction: Interaction, user: discord.Member):
