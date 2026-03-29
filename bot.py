@@ -693,11 +693,15 @@ async def transfer(interaction: Interaction, user: discord.Member):
 async def close(interaction: Interaction):
     await close_ticket_logic(interaction)
 
-@bot.tree.command(name="managerole", description="Add or remove roles from a user (Management only)")
+ALLOWED_ROLES_MANAGEROLE = [1474846906369966203, 1474846906369966204]  # Noobie MM, Experienced MM
+
+@bot.tree.command(name="managerole", description="Add or remove MM roles from a user")
 @app_commands.describe(user="User", role="Role", action="add or remove", reason="Reason")
 async def managerole(interaction: Interaction, user: discord.Member, role: discord.Role, action: str, reason: str = "No reason provided"):
-    if not is_manager(interaction):
-        return await interaction.response.send_message("❌ Only Managers can use this command.", ephemeral=True)
+    if not has_role(interaction.user, 1474846906407452869):
+        return await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+    if role.id not in ALLOWED_ROLES_MANAGEROLE:
+        return await interaction.response.send_message("❌ You can only assign Noobie MM or Experienced MM roles.", ephemeral=True)
     log_ch = interaction.guild.get_channel(ROLE_LOG_CHANNEL_ID)
     if action.lower() == "add":
         await user.add_roles(role)
@@ -722,15 +726,19 @@ async def managerole(interaction: Interaction, user: discord.Member, role: disco
             embed.add_field(name="Reason", value=reason, inline=False)
             embed.add_field(name="Time", value=datetime.datetime.now().strftime("%A, %B %d, %Y %I:%M %p"), inline=False)
             embed.set_footer(text="Powered by Trading Portal • Today")
-            await log_ch.send(embed=embed)
-    else:
-        await interaction.response.send_message("❌ Action must be 'add' or 'remove'.", ephemeral=True)
-
-@bot.tree.command(name="manageban", description="Ban or unban a user (Management only)")
+            
+ban_cooldowns = {}
+@bot.tree.command(name="manageban", description="Ban or unban a user")
 @app_commands.describe(user="User ID or mention", action="ban or unban")
 async def manageban(interaction: Interaction, user: str, action: str):
-    if not is_manager(interaction):
-        return await interaction.response.send_message("❌ Only Managers can use this command.", ephemeral=True)
+    if not has_role(interaction.user, 1474846906407452871):
+        return await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
+    now = datetime.datetime.now()
+    last_used = ban_cooldowns.get(interaction.user.id)
+    if last_used and (now - last_used).total_seconds() < 3600:
+        remaining = int(3600 - (now - last_used).total_seconds())
+        mins, secs = divmod(remaining, 60)
+        return await interaction.response.send_message(f"⏳ You're on cooldown! Try again in **{mins}m {secs}s**.", ephemeral=True)
     try:
         uid_str = user.replace('<@','').replace('>','').replace('!','').replace('&','')
         uid = int(uid_str)
@@ -739,6 +747,7 @@ async def manageban(interaction: Interaction, user: str, action: str):
             try: target_user = await bot.fetch_user(uid)
             except: target_user = f"Unknown User ({uid})"
             await interaction.guild.ban(discord.Object(id=uid), reason=f"Banned by {interaction.user}")
+            ban_cooldowns[interaction.user.id] = now
             await interaction.response.send_message(f"✅ User ID `{uid}` has been banned.")
             if log_ch:
                 log_embed = Embed(title="🛡️ Member Banned", color=Color.red(), timestamp=datetime.datetime.now())
@@ -750,6 +759,7 @@ async def manageban(interaction: Interaction, user: str, action: str):
             try: target_user = await bot.fetch_user(uid)
             except: target_user = f"Unknown User ({uid})"
             await interaction.guild.unban(discord.Object(id=uid), reason=f"Unbanned by {interaction.user}")
+            ban_cooldowns[interaction.user.id] = now
             await interaction.response.send_message(f"✅ User ID `{uid}` has been unbanned.")
             if log_ch:
                 log_embed = Embed(title="🔓 Member Unbanned", color=Color.green(), timestamp=datetime.datetime.now())
@@ -759,6 +769,10 @@ async def manageban(interaction: Interaction, user: str, action: str):
                 await log_ch.send(embed=log_embed)
         else:
             await interaction.response.send_message("❌ Action must be 'ban' or 'unban'.", ephemeral=True)
+    except ValueError:
+        await interaction.response.send_message("❌ Invalid User ID or mention provided.", ephemeral=True)
+    except Exception as e:
+        await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
     except ValueError:
         await interaction.response.send_message("❌ Invalid User ID or mention provided.", ephemeral=True)
     except Exception as e:
