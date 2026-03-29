@@ -45,6 +45,8 @@ class MyBot(commands.Bot):
         self.add_view(TicketControls())
         self.add_view(IndexTicketPanel())
         self.add_view(IndexTicketControls())
+        self.add_view(SupportTicketPanel())
+        self.add_view(SupportTicketControls())
         print(f"Logged in as {self.user}. Commands synced globally")
 
     async def load_data(self):
