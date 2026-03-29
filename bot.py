@@ -742,13 +742,10 @@ async def clearwarns(interaction: Interaction, user: discord.Member):
     await interaction.response.send_message(f"✅ All warns cleared for {user.mention}")
 @bot.tree.command(name="whatismm", description="Explains what a middleman is")
 async def whatismm(interaction: Interaction):
-    embed = Embed(title="ℹ️ What is a Middleman?", color=Color.blurple())
-    embed.description = (
-        "• A middleman is a **trusted go-between** who holds payment until the seller delivers goods or services.\n\n"
-        "• The funds are released once the buyer confirms everything is as agreed.\n\n"
-        "• This process helps **prevent scams, build trust, and resolve disputes**.\n\n"
-        "• Common in **valuable games, real-life money trades, in-game currency, and collectibles**.\n\n"
-        "• Only works safely if the middleman is **reputable and verified**."
+    embed = Embed(
+        title="ℹ️ What is a Middleman?",
+        description="• A middleman is a **trusted go-between** who holds payment until the seller delivers goods or services.\n\n• The funds are released once the buyer confirms everything is as agreed.\n\n• This process helps **prevent scams, build trust, and resolve disputes**.\n\n• Common in **valuable games, real-life money trades, in-game currency, and collectibles**.\n\n• Only works safely if the middleman is **reputable and verified**.",
+        color=Color.blurple()
     )
     embed.set_footer(text="Powered by Trading Portal • Today")
     await interaction.response.send_message(embed=embed)
