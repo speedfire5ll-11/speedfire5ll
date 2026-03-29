@@ -843,6 +843,6 @@ async def setupsupportticket(interaction: Interaction):
     )
 
     await interaction.channel.send(embed=embed, view=SupportTicketPanel())
-    await interaction.response.send_message("✅ Support ticket panel deployed successfully.", ephemeral=True).
+        await interaction.response.send_message("✅ Support ticket panel deployed successfully.", ephemeral=True)
 if __name__ == "__main__":
     bot.run(os.environ.get("BOT_TOKEN"))
